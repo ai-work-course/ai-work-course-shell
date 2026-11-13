@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="ko" data-brand="claude">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>홈 · AI 활용 교육</title>
+<link rel="stylesheet" href="shell/pages.css">
+</head>
+<body data-screen="home">
+<header class="bar"><a class="brand" href="home.html">AI 활용 교육</a><nav class="nav" id="nav"></nav></header>
+<main class="wrap">
+  <h1>AI 활용 교육</h1>
+  <p class="lead">볼 과정을 고릅니다.</p>
+  <noscript><p class="msg err">이 화면은 JavaScript가 켜져 있어야 열립니다.</p></noscript>
+  <p class="msg warn" id="denied" hidden>그 내용을 볼 수 없습니다. 과정 권한이 없거나 없는 주소입니다.</p>
+  <p class="msg" id="status" role="status">불러오는 중입니다.</p>
+  <ul class="cards" id="cards"></ul>
+</main>
+<script src="shell/config.js"></script>
+<script src="lib/supabase.js"></script>
+<script src="shell/paths.js"></script>
+<script src="shell/common.js"></script>
+<script src="shell/home.js"></script>
+</body>
+</html>
