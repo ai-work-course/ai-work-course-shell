@@ -8,14 +8,22 @@
 <link rel="stylesheet" href="shell/pages.css">
 </head>
 <body data-screen="home">
-<header class="bar"><a class="brand" href="home.html">AI 활용 교육</a><nav class="nav" id="nav"></nav></header>
-<main class="wrap">
-  <h1>AI 활용 교육</h1>
-  <p class="lead">볼 과정을 고릅니다.</p>
+<svg class="sprite" aria-hidden="true"><symbol id="i-mark" viewBox="0 0 32 32"><rect class="mk-bg" width="32" height="32" rx="8"/><path class="mk-ink" d="M16 10.6c-2.3-1.7-5.1-2.3-8.2-1.9v12.7c3.1-.4 5.9.2 8.2 1.9 2.3-1.7 5.1-2.3 8.2-1.9V8.7c-3.1-.4-5.9.2-8.2 1.9zM16 10.6v12.7"/></symbol></svg>
+<header class="bar"><a class="brand" href="home.html" aria-label="AI 활용 교육"><svg viewBox="0 0 32 32" aria-hidden="true"><use href="#i-mark"></use></svg><span class="brand-name"><b>AI 활용</b> <span class="lt">교육</span></span></a><nav class="nav" id="nav"></nav></header>
+<main class="page">
+  <section class="hello"><p class="kicker">내 강의실</p><h1 id="hello">AI 활용 교육</h1></section>
   <noscript><p class="msg err">이 화면은 JavaScript가 켜져 있어야 열립니다.</p></noscript>
   <p class="msg warn" id="denied" hidden>그 내용을 볼 수 없습니다. 과정 권한이 없거나 없는 주소입니다.</p>
   <p class="msg" id="status" role="status">불러오는 중입니다.</p>
-  <ul class="cards" id="cards"></ul>
+  <div id="resumes"></div>
+  <div class="home-grid">
+    <section aria-labelledby="myCourses">
+      <div class="sec-head"><h2 id="myCourses">내 과정</h2></div>
+      <ul class="cards course-cards" id="cards"></ul>
+    </section>
+    <aside class="side-col" id="sideCol" aria-label="내 진도와 다음에 볼 차시"></aside>
+  </div>
+  <p class="foot">사내 한정 교육 사이트입니다.</p>
 </main>
 <script src="shell/config.js"></script>
 <script src="lib/supabase.js"></script>

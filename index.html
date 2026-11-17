@@ -8,18 +8,24 @@
 <link rel="stylesheet" href="shell/pages.css">
 </head>
 <body data-screen="login">
-<main class="wrap narrow">
-  <h1>AI 활용 교육</h1>
-  <p class="lead">강사에게 받은 아이디로 로그인합니다.</p>
-  <noscript><p class="msg err">이 화면은 JavaScript가 켜져 있어야 열립니다.</p></noscript>
-  <p class="msg" id="status" role="status" hidden></p>
-  <p id="guardLinks" hidden><a href="home.html">홈으로</a></p>
-  <form id="f" hidden novalidate>
-    <div class="field"><label for="uid">아이디</label><input id="uid" name="uid" autocomplete="username" autocapitalize="off" spellcheck="false" maxlength="20"></div>
-    <div class="field"><label for="pw">비밀번호</label><input id="pw" name="pw" type="password" autocomplete="current-password"></div>
-    <div class="row-btns"><button class="btn" id="go" type="submit">로그인</button></div>
-  </form>
-  <p class="hint">비밀번호를 잊었으면 강사에게 초기화를 요청합니다.</p>
+<main class="login-screen">
+  <div class="login-card">
+    <svg class="login-mark" viewBox="0 0 32 32" aria-hidden="true"><rect class="mk-bg" width="32" height="32" rx="8"/><path class="mk-ink" d="M16 10.6c-2.3-1.7-5.1-2.3-8.2-1.9v12.7c3.1-.4 5.9.2 8.2 1.9 2.3-1.7 5.1-2.3 8.2-1.9V8.7c-3.1-.4-5.9.2-8.2 1.9zM16 10.6v12.7"/></svg>
+    <h1 class="login-brand">AI 활용 <span class="lt">교육</span></h1>
+    <p class="login-sub">사내 한정 · 교육 과정</p>
+    <noscript><p class="msg err">이 화면은 JavaScript가 켜져 있어야 열립니다.</p></noscript>
+    <p class="msg" id="status" role="status" hidden></p>
+    <p class="guard" id="guardLinks" hidden><a href="home.html">홈으로</a></p>
+    <form id="f" class="login-form" hidden novalidate>
+      <div class="field"><label class="sr-only" for="uid">아이디</label><input id="uid" name="uid" autocomplete="username" autocapitalize="off" spellcheck="false" maxlength="20" placeholder="아이디"></div>
+      <div class="field"><label class="sr-only" for="pw">비밀번호</label><input id="pw" name="pw" type="password" autocomplete="current-password" placeholder="비밀번호"></div>
+      <button class="btn" id="go" type="submit">로그인</button>
+    </form>
+    <div class="login-foot">
+      <p>아이디와 처음 비밀번호는 강사에게 받습니다.</p>
+      <p>비밀번호를 잊었으면 강사에게 초기화를 요청합니다.</p>
+    </div>
+  </div>
 </main>
 <script src="shell/config.js"></script>
 <script src="lib/supabase.js"></script>
