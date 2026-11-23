@@ -16,7 +16,9 @@
     method_not_allowed: '입력한 값을 확인해 주세요.',
     duplicate_login_id: '이미 있는 아이디입니다.',
     too_large: '입력한 값을 확인해 주세요.',
-    server_error: '처리하지 못했습니다. 잠시 뒤 다시 시도하고, 새로 고침으로 지금 상태를 확인해 주세요.'
+    server_error: '처리하지 못했습니다. 잠시 뒤 다시 시도하고, 새로 고침으로 지금 상태를 확인해 주세요.',
+    still_active: '사용 중지한 계정만 지울 수 있습니다. 먼저 사용 중지해 주세요.',
+    auth_delete_failed: '계정 기록과 진도는 지웠지만 로그인 계정 정리가 남았습니다. Supabase 콘솔 Users에서 계정을 지워 주세요.'
   };
   var lists = {}, roster = [];
 
@@ -77,7 +79,8 @@
       var ops = '<button class="btn small ghost" type="button" data-op="reset" data-i="' + i + '">비밀번호 초기화</button>' +
         (s.active ? '<button class="btn small ghost" type="button" data-op="stop" data-i="' + i + '">사용 중지</button>'
                   : '<button class="btn small ghost" type="button" data-op="resume" data-i="' + i + '">다시 사용</button>') +
-        '<button class="btn small ghost" type="button" data-op="courses" data-i="' + i + '">과정 바꾸기</button>';
+        '<button class="btn small ghost" type="button" data-op="courses" data-i="' + i + '">과정 바꾸기</button>' +
+        (s.active ? '' : '<button class="btn small danger" type="button" data-op="delete" data-i="' + i + '">삭제</button>');
       return '<tr data-login="' + esc(s.login_id) + '"><td>' + esc(s.login_id) + '</td><td>' +
         (s.courses || []).map(function (c) { return SHORT[c] || esc(c); }).join(', ') + '</td><td>' + statusOf(s) + '</td><td>' +
         when(s.last_seen_at) + '</td><td>' + progressCell(s, rows) + '</td><td class="where">' + whereCell(rows) + '</td><td>' + ops + '</td></tr>';
@@ -129,14 +132,16 @@
       if (x.status === 200 && x.j.ok) { return x.j; }
       if (x.status === 401) { E.toLogin(); throw { handled: true }; }
       if (x.status === 0) { throw { text: E.TEXT.net }; }
-      throw { text: ERR[x.j.error] || ERR.server_error };
+      throw { text: ERR[x.j.error] || ERR.server_error, code: x.j.error };
     });
   }
-  function showResult(text, pw) {
+  /* kind: 'issue'(발급, "지금 한 번만 보입니다") 또는 'reset'(초기화, 모든 계정이 같은 값이라는 주의). 비밀번호 값은 결과 칸에만 둔다 */
+  function showResult(text, pw, kind) {
     el('resultText').textContent = text;
     el('resultPw').textContent = pw || '';
     el('resultPw').hidden = !pw;
-    el('resultWarn').hidden = !pw;
+    el('resultWarn').hidden = !(pw && kind !== 'reset');
+    el('resultWarnReset').hidden = !(pw && kind === 'reset');
     el('result').hidden = false;
   }
   function clearResult() {
@@ -161,12 +166,51 @@
     });
   }
 
+  /* 삭제 확인 창. 아이디를 한 번 더 입력해 앞뒤 빈칸을 뺀 값이 글자 그대로 같을 때만 삭제 단추가 켜진다(대소문자 그대로).
+     요청은 창이 닫힐 때 returnValue === 'ok'이고 입력을 다시 비교해도 같을 때만 보낸다(입력 칸 Enter·다른 단추로 닫혀도 두 조건이 아니면 요청 0) */
+  function askDelete(s) {
+    return new Promise(function (resolve) {
+      var d = el('delDlg'), inp = el('delInput'), ok = el('delOk');
+      function same() { return inp.value.trim() === s.login_id; }
+      function onInput() { ok.disabled = !same(); }
+      function onClose() {
+        d.removeEventListener('close', onClose);
+        inp.removeEventListener('input', onInput);
+        resolve(d.returnValue === 'ok' && same());
+      }
+      el('delText').textContent = s.login_id + ' 계정과 진도 기록을 모두 지웁니다. 되돌릴 수 없습니다. 지우려면 아이디를 한 번 더 입력하세요.';
+      inp.value = '';
+      ok.disabled = true;
+      inp.addEventListener('input', onInput);
+      d.addEventListener('close', onClose);
+      d.returnValue = '';
+      d.showModal();
+      inp.focus();
+    });
+  }
+
   function onOp(op, s) {
     clearResult();
     var id = s.login_id;
     if (op === 'reset') {
       if (!window.confirm(id + '의 비밀번호를 초기화할까요? 지금 비밀번호로는 더 로그인할 수 없습니다.')) { return; }
-      callAdmin({ action: 'reset_password', login_id: id }).then(function (j) { showResult(id + '의 새 임시 비밀번호:', j.temp_password); load(); }, fail);
+      callAdmin({ action: 'reset_password', login_id: id }).then(function (j) {
+        showResult(id + '의 비밀번호를 초기화했습니다. 첫 비밀번호:', j.temp_password, 'reset');
+        load();
+      }, fail);
+    } else if (op === 'delete') {
+      askDelete(s).then(function (yes) {
+        if (!yes) { return; }
+        callAdmin({ action: 'delete', login_id: id }).then(function () {
+          showResult(id + ' 계정과 진도 기록을 지웠습니다.');
+          load();
+        }, function (x) {
+          if (x && x.code === 'auth_delete_failed') {   /* 고아 계정: 지운 대상의 아이디는 이 화면이 아는 값(응답·로그에는 없음) */
+            showResult('계정 기록과 진도는 지웠지만 로그인 계정 정리가 남았습니다. Supabase 콘솔 Users에서 ' + id + ' 계정을 지워 주세요.');
+            load();
+          } else { fail(x); }
+        });
+      });
     } else if (op === 'stop') {
       if (!window.confirm(id + ' 계정의 사용을 중지할까요? 진도 기록은 남습니다.')) { return; }
       callAdmin({ action: 'set_active', login_id: id, active: false }).then(function () { showResult(id + ' 계정의 사용을 중지했습니다.'); load(); }, fail);

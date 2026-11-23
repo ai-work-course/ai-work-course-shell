@@ -376,6 +376,12 @@ table.tbl{width:100%;border-collapse:collapse;background:var(--surface);font-siz
 dialog{border:1px solid var(--rule-strong);border-radius:var(--r-2xl);background:var(--surface);color:var(--ink);padding:var(--sp-6);max-width:420px}
 dialog::backdrop{background:color-mix(in srgb,var(--ink) 35%,transparent)}
 .stamp{color:var(--muted);font-size:var(--text-sm);margin-left:var(--sp-3)}
+/* 위험 단추(강사 화면 삭제)와 차시 진도 지우기 작은 단추(설계서 v0.6 4.1·4.2). 토큰 변수만 쓴다 */
+.btn.danger{background:var(--danger);border-color:var(--danger);color:var(--accent-ink)}
+.btn.danger:hover{box-shadow:0 4px 14px color-mix(in srgb,var(--danger) 30%,transparent)}
+.list li .btn.small{margin-left:var(--sp-3)}
+.lprog .btn.small{margin-top:var(--sp-1)}
+dialog .field{margin:var(--sp-4) 0 0}
 
 /* 실습자료 받기 펼침(설계서 v0.4 4.13). 동작은 그대로, 모양만 */
 .files{margin:var(--sp-4) 0 0;padding:var(--sp-4) 0 0;border-top:1px solid var(--rule)}

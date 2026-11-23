@@ -28,6 +28,11 @@
 
   var site = null, lessons = [], cur = null, rows = null, frame = null, deckTotal = 0;
   var openStages = null;
+  var userId = null, resetting = false;
+  var RESET_TEXT = {
+    fail: '진도를 지우지 못했습니다. 인터넷 연결을 확인하고 다시 시도해 주세요.',
+    denied: '이 차시 진도를 지울 수 없습니다.'
+  };
 
   /* ── 주소 만들기 ── */
   /* 수강 화면 주소는 이 한 꼴로 만든다(3.5 ③ 수2): 경로 꼴, 같은 차시면 늘 같은 글자 */
@@ -56,9 +61,16 @@
     return u;
   }
 
-  /* ── 창 이동(3.3 표 둘째~다섯째 줄, 3.5 ③④): 먼저 액자를 떼고 옮긴다(수1). 창 이동은 이 함수 하나로만 한다 ── */
+  /* ── 창 이동(3.3 표 둘째~다섯째 줄, 3.5 ③④): 먼저 액자를 떼고 옮긴다(수1). 창 이동은 이 함수 하나로만 한다 ──
+     옮길 주소가 지금 문서와 경로·검색어가 같고 조각(#장)이 있으면 location.replace는 문서를 다시 열지 않고 그 자리로 스크롤만 한다(HTML 표준).
+     액자를 이미 뗐으므로 화면이 빈 채로 남는다. 이때는 주소만 고쳐 쓰고 문서를 다시 연다(설계서 v0.6 개발실장 재확인 중1) */
   function moveTop(url) {
     if (frame) { try { frame.remove(); } catch (e) {} frame = null; }
+    var x = null;
+    try { x = new URL(url, location.href); } catch (e) { x = null; }
+    if (x && x.origin === location.origin && x.pathname === location.pathname && x.search === location.search && x.hash) {
+      try { history.replaceState(null, '', x.pathname + x.search + x.hash); location.reload(); return; } catch (e) {}
+    }
     location.replace(url);
   }
   function denied() { moveTop(BASE + 'home.html?e=denied'); }
@@ -192,6 +204,8 @@
     if (k !== 'none' && t > 0 && s > 0) {
       h += meter(s * 100 / t, '이 차시 진행') + '<small id="infoSlides">' + esc(t + '장 가운데 ' + s + '장까지 봤습니다') + '</small>';
     }
+    /* 차시 진도 지우기: 그 차시에 진도가 있을 때만(안 봄이면 없음). 버튼 글자는 고정 글자, 대상은 지금 차시(cur) */
+    if (k === 'doing' || k === 'done') { h += '<button class="btn small ghost" type="button" id="resetLesson">이 차시 진도 지우기</button>'; }
     el('infoProg').innerHTML = h;
     fillMeters(el('infoProg'));
   }
@@ -214,6 +228,47 @@
     drawBar();
     drawSide(lp);
     drawInfo(lp);
+  }
+
+  /* ── 차시 진도 지우기(설계서 v0.6 5.1) ── */
+  /* 4번 이 PC 기록 정리(B39): <앞말>progress에서 그 차시 키를 지우고(비면 항목을 지움), <앞말>last가 그 차시면 지운다. me.js와 같은 글자 */
+  function dropLocal(course, lid) {
+    var pfx = E.C.stores[course];
+    if (!LS || !pfx) { return; }
+    try {
+      var all = JSON.parse(LS.getItem(pfx + 'progress') || 'null');
+      if (all && typeof all === 'object' && !Array.isArray(all) && has(all, lid)) {
+        delete all[lid];
+        if (Object.keys(all).length) { LS.setItem(pfx + 'progress', JSON.stringify(all)); } else { LS.removeItem(pfx + 'progress'); }
+      }
+    } catch (e) {}
+    try {
+      var last = JSON.parse(LS.getItem(pfx + 'last') || 'null');
+      if (last && last.id === lid) { LS.removeItem(pfx + 'last'); }
+    } catch (e) {}
+  }
+  function resetLesson() {
+    var l = cur;
+    if (!l || resetting) { return; }
+    if (!window.confirm(l.no + '차시 ' + l.title + '의 진도를 지울까요? 본 장과 체크 표시가 모두 지워지고 되돌릴 수 없습니다. 다른 창에서 이 차시를 열어 두었다면 먼저 닫아 주세요.')) { return; }
+    resetting = true;
+    /* 2. 확인이면 기다리지 않고 한 처리 안에서: ⓪ 지금 장 번호를 읽어 둔다 ① 남은 진도 표시에서 이 차시를 뺀다 ② 액자를 뗀다.
+       표시를 먼저 빼야 액자가 떠날 때 보내기(겉틀_덧붙임.js의 leave는 표시가 있을 때만 보냄)를 하지 않는다. 액자를 떼면 액자 안 묶음 보내기 타이머도 멈춘다(B40) */
+    var back = slideHash(slideOf(l, progress()));
+    E.pendingRemove({ u: userId, c: c, id: l.id });
+    if (frame) { try { frame.remove(); } catch (e) {} frame = null; }
+    /* 3. 서버 행 지우기 */
+    E.rpc('edu_reset_progress', { p_course: c, p_lesson_id: l.id }).then(function (r) {
+      /* 이동은 moveTop으로만 한다. 어느 쪽이든 수강 화면이 처음부터 다시 돈다(가드·진도 맞추기) */
+      if (!r.error) {
+        dropLocal(c, l.id);
+        moveTop(learnUrl(l.id));   /* 장 없음 → 1장부터(A19) */
+        return;
+      }
+      if (r.status === 401) { E.toLogin(); return; }
+      window.alert((r.status === 403 || (r.error && r.error.code === '42501')) ? RESET_TEXT.denied : RESET_TEXT.fail);
+      moveTop(learnUrl(l.id) + back);
+    });
   }
 
   /* ── 3.4 storage 알림: 지금 과정 앞말의 progress·last이거나 null(전체 지움)만 본다. 200ms 모아 한 번 그린다 ── */
@@ -457,6 +512,7 @@
   E.start();
   E.screenGuard('learn').then(function (g) {
     if (!g) { return; }
+    userId = g.session.user.id;
     E.renderNav(g.row);
     /* 5. 과정 검증(3.2 ①) */
     if (E.COURSES.indexOf(c) < 0 || E.allowedCourses(g.row).indexOf(c) < 0) { denied(); return; }
@@ -503,6 +559,9 @@
           el('sideLinks').innerHTML = linksHtml();
           drawLesson(lp);
           el('info').hidden = false;
+          el('infoProg').addEventListener('click', function (e) {
+            if (e.target.closest && e.target.closest('#resetLesson')) { resetLesson(); }
+          });
           el('lcards').hidden = false;
           if (rows) { E.showMsg(''); } else { E.showMsg(TEXT.saveLocal, 'warn'); }
           syncListBtn();

@@ -10,6 +10,7 @@
     confirm: '새 비밀번호 두 칸이 서로 다릅니다.',
     curWrong: '지금 비밀번호가 맞지 않습니다.',
     weak: '이 비밀번호는 쓸 수 없습니다. 다른 비밀번호로 바꿔 주세요.',
+    again: '초기화 비밀번호와 같은 비밀번호는 쓸 수 없습니다. 다른 비밀번호로 바꿔 주세요.',
     other: '비밀번호를 바꾸지 못했습니다. 잠시 뒤 다시 시도해 주세요.'
   };
   var q = new URLSearchParams(location.search);
@@ -46,7 +47,21 @@
       return E.rpc('edu_password_changed');
     }).then(function (r) {
       if (r.error) { throw { step: 'mark', e: { status: r.status } }; }
+      return E.me();
+    }).then(function (m) {
       ['cur', 'new1', 'new2'].forEach(function (id) { el(id).value = ''; });
+      /* 서버(edu_password_changed)가 초기화 값으로 바꾼 것을 알아보고 첫 로그인 전 표시를 남겼으면 이 화면에 남는다(설계서 v0.6 5.4).
+         화면에는 초기화 값을 두지 않는다. 판정은 서버가 하고 화면은 must_change_pw만 읽는다. 읽지 못했거나 줄이 없거나 사용 중이 아니면 지금처럼 이동한다(다음 화면 가드가 다시 본다) */
+      if (m && m.ok && m.row && m.row.active && m.row.must_change_pw) {
+        row = m.row;
+        go.disabled = false;
+        el('intro').hidden = false;
+        el('back').hidden = true;
+        E.showMsg('');
+        fieldErr(T.again);
+        el('cur').focus();
+        return;
+      }
       var dest = next || (fromMe ? E.BASE + 'me.html' : E.BASE + 'home.html');
       E.showMsg('비밀번호를 바꿨습니다. ' + (next ? '' : (fromMe ? '마이페이지로 갑니다.' : '홈으로 갑니다.')), 'ok');
       form.hidden = true;
